@@ -3,14 +3,15 @@ create table log_date (
 	entry_date date not null
 );
 
+
 create table food (
 	id integer primary key autoincrement,
 	name text not null,
+	protein integer not null,
 	carbs integer not null,
-	fats integer not null,
+	fat integer not null,
 	calories integer not null
 );
-
 
 create table food_date (
 	food_id integer not null,
