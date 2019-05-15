@@ -51,23 +51,38 @@ def index():
 
 @app.route('/view/<date>', methods=['GET', 'POST'])   # 20170520 format
 def view(date):
-	if request.method == 'POST':
-		return '<h1> The food item added is #{}</h1>'.format(request.form["food-select"])
-
 	db = get_db()
 
-	cur = db.execute('select entry_date from log_date where entry_date = ?', [date])
-	result =  cur.fetchone()
+	cur = db.execute('select id, entry_date from log_date where entry_date = ?', [date])
+	date_result =  cur.fetchone()
+	# result['entry_date'] <--- date_result returns
+	# result['id']<-- date_result returns
+
+	if request.method == 'POST':
+		db.execute('insert into food_date (food_id, log_date_id) values (?, ?)', [request.form['food-select'], date_result['id']])
+		db.commit()
+
+
+		# return '<h1> The food item added is #{}</h1>'.format(request.form['food-select']) #test visual add food to date
 
 	# return '<h1>The date is {}</h1>'.format(result['entry_date']) # test
-	d = datetime.strptime(str(result['entry_date']), '%Y%m%d')
+	d = datetime.strptime(str(date_result['entry_date']), '%Y%m%d')
 	face_date = datetime.strftime(d, '%B %d, %Y')
 
 	food_cur = db.execute('select id, name from food')
 	food_results = food_cur.fetchall()
 
+	log_cur = db.execute('select food.name, food.protein, food.carbs, food.fat, food.calories from log_date join\
+		food_date on food_date.log_date_id = log_date.id join food on food.id = food_date.food_id where log_date.entry_date = ?', [date])
+	#all foods for particular day
+	log_results = log_cur.fetchall()
 
-	return render_template('day.html', date=face_date, food_results=food_results)
+
+	return render_template('day.html', date=face_date, food_results=food_results, log_results=log_results)
+
+
+
+
 
 @app.route('/food', methods=['GET', 'POST'])
 def food():
