@@ -77,8 +77,20 @@ def view(date):
 	#all foods for particular day
 	log_results = log_cur.fetchall()
 
+	totals = {}
+	totals['protein'] = 0
+	totals['carbs'] = 0
+	totals['fat'] = 0
+	totals['calories'] = 0
 
-	return render_template('day.html', date=face_date, food_results=food_results, log_results=log_results)
+	for food in log_results:
+		totals['protein'] += food['protein']
+		totals['carbs'] += food['carbs']
+		totals['fat'] += food['fat']
+		totals['calories'] += food['calories']
+
+
+	return render_template('day.html', date=face_date, food_results=food_results, log_results=log_results, totals=totals)
 
 
 
