@@ -1,5 +1,6 @@
 from flask import Flask, render_template, g, request
 import sqlite3
+from datetime import datetime
 
 app = Flask(__name__) #instantiate
 
@@ -14,20 +15,59 @@ def get_db():
 	if not hasattr(g, 'sqlite3_db'):
 		g.sqlite_db = connect_db()
 	return g.sqlite_db
-
-
+ 
 def close_db(error):
 	if hasattr(g, 'sqlite_db'):
 		g.sqlite_db.close()
-	
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-	return render_template('home.html')
+	db = get_db()
+	if request.method == 'POST':
+		date = request.form['date']
 
-@app.route('/view')
-def view():
-	return render_template('day.html')
+		dt = datetime.strptime(date, '%Y-%m-%d')
+		database_date = datetime.strftime(dt, '%Y%m%d')
+
+		db.execute('insert into log_date (entry_date) values (?)', [database_date])
+		db.commit()
+
+	cur = db.execute('select entry_date from log_date order by entry_date desc')
+	results = cur.fetchall()
+
+	face_results = []
+
+	for i in results:
+		single_date = {}
+
+		d = datetime.strptime(str(i['entry_date']), '%Y%m%d')
+		single_date['entry_date'] = datetime.strftime(d, '%B %d %Y')
+
+		face_results.append(single_date)
+
+
+	return render_template('home.html', results=face_results)
+
+
+@app.route('/view/<date>', methods=['GET', 'POST'])   # 20170520 format
+def view(date):
+	if request.method == 'POST':
+		return '<h1> The food item added is #{}</h1>'.format(request.form["food-select"])
+
+	db = get_db()
+
+	cur = db.execute('select entry_date from log_date where entry_date = ?', [date])
+	result =  cur.fetchone()
+
+	# return '<h1>The date is {}</h1>'.format(result['entry_date']) # test
+	d = datetime.strptime(str(result['entry_date']), '%Y%m%d')
+	face_date = datetime.strftime(d, '%B %d, %Y')
+
+	food_cur = db.execute('select id, name from food')
+	food_results = food_cur.fetchall()
+
+
+	return render_template('day.html', date=face_date, food_results=food_results)
 
 @app.route('/food', methods=['GET', 'POST'])
 def food():
@@ -48,8 +88,8 @@ def food():
 			[name, protein, carbs, fat, calories])
 		db.commit() 
 		# creat alert box here to test if necessary
-    
-		# return '<h1>Name: {} Protein: {} Carbs: {} Fat: {}</h1>'.format(request.form['food-name'], \ #      test submission
+
+		# return '<h1>Name: {} Protein: {} Carbs: {} Fat: {}</h1>'.format(request.form['food-name'], \ #  test submission
 		# 	request.form['protein'], request.form['carbs'], request.form['fat'])   
 
 	cur = db.execute('select name, protein, carbs, fat, calories from food')
