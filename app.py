@@ -1,20 +1,10 @@
 from flask import Flask, render_template, g, request
 import sqlite3
 from datetime import datetime
-
+from database import connect_db, get_db
 app = Flask(__name__) #instantiate
 
 
-def connect_db():
-	sql = sqlite3.connect('/home/vagrant/src/ALL_PROJ/Projects PPrinted/EatFood/food_log.db')
-	sql.row_factory = sqlite3.Row # dictionaries instead of tuples (simpler)
-	return sql
-
-
-def get_db():
-	if not hasattr(g, 'sqlite3_db'):
-		g.sqlite_db = connect_db()
-	return g.sqlite_db
  
 def close_db(error):
 	if hasattr(g, 'sqlite_db'):
@@ -32,21 +22,30 @@ def index():
 		db.execute('insert into log_date (entry_date) values (?)', [database_date])
 		db.commit()
 
-	cur = db.execute('select entry_date from log_date order by entry_date desc')
+	cur = db.execute('select log_date.entry_date, sum(food.protein) as protein, sum(food.carbs) as carbs, sum(food.fat) as fat, sum(food.calories) as calories\
+	 from log_date join food_date on food_date.log_date_id = log_date.id join food on food.id = food_date.food_id group by log_date.id \
+	 order by log_date.entry_date desc')
+	# cur = db.execute('select entry_date from log_date order by entry_date desc')<--- delete
 	results = cur.fetchall()
 
-	face_results = []
+	date_results = []
 
 	for i in results:
 		single_date = {}
 
+		single_date['entry_date'] = i['entry_date']
+		single_date['protein'] = i['protein']
+		single_date['carbs'] = i['carbs']
+		single_date['fat'] = i['fat']
+		single_date['calories'] = i['calories']
+
 		d = datetime.strptime(str(i['entry_date']), '%Y%m%d')
-		single_date['entry_date'] = datetime.strftime(d, '%B %d %Y')
+		single_date['face_date'] = datetime.strftime(d, '%B %d, %Y')
 
-		face_results.append(single_date)
+		date_results.append(single_date)
 
 
-	return render_template('home.html', results=face_results)
+	return render_template('home.html', results=date_results)
 
 
 @app.route('/view/<date>', methods=['GET', 'POST'])   # 20170520 format
@@ -59,9 +58,12 @@ def view(date):
 	# result['id']<-- date_result returns
 
 	if request.method == 'POST':
+	
 		db.execute('insert into food_date (food_id, log_date_id) values (?, ?)', [request.form['food-select'], date_result['id']])
-		db.commit()
+		#throws a 'Unique' error sqlite3
 
+
+		db.commit()
 
 		# return '<h1> The food item added is #{}</h1>'.format(request.form['food-select']) #test visual add food to date
 
@@ -90,7 +92,7 @@ def view(date):
 		totals['calories'] += food['calories']
 
 
-	return render_template('day.html', date=face_date, food_results=food_results, log_results=log_results, totals=totals)
+	return render_template('day.html', entry_date=date_result['entry_date'], face_date=face_date, food_results=food_results, log_results=log_results, totals=totals)
 
 
 
