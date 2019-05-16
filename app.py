@@ -22,9 +22,12 @@ def index():
 		db.execute('insert into log_date (entry_date) values (?)', [database_date])
 		db.commit()
 
-	cur = db.execute('select log_date.entry_date, sum(food.protein) as protein, sum(food.carbs) as carbs, sum(food.fat) as fat, sum(food.calories) as calories\
-	 from log_date join food_date on food_date.log_date_id = log_date.id join food on food.id = food_date.food_id group by log_date.id \
-	 order by log_date.entry_date desc')
+	cur = db.execute('''select log_date.entry_date, sum(food.protein) as protein, sum(food.carbs) as carbs, sum(food.fat) as fat, sum(food.calories) as calories\
+	 				from log_date 
+	 				join food_date on food_date.log_date_id = log_date.id 
+	 				join food on food.id = food_date.food_id 
+	 				group by log_date.id order by log_date.entry_date desc''')
+
 	# cur = db.execute('select entry_date from log_date order by entry_date desc')<--- delete
 	results = cur.fetchall()
 
@@ -74,8 +77,13 @@ def view(date):
 	food_cur = db.execute('select id, name from food')
 	food_results = food_cur.fetchall()
 
-	log_cur = db.execute('select food.name, food.protein, food.carbs, food.fat, food.calories from log_date join\
-		food_date on food_date.log_date_id = log_date.id join food on food.id = food_date.food_id where log_date.entry_date = ?', [date])
+	log_cur = db.execute('''select food.name, food.protein, food.carbs, food.fat, food.calories 
+							from log_date 
+							join food_date on food_date.log_date_id = log_date.id 
+							join food on food.id = food_date.food_id 
+							where log_date.entry_date = ?''', [date])
+							# LEFT joins would work better
+
 	#all foods for particular day
 	log_results = log_cur.fetchall()
 
@@ -92,7 +100,8 @@ def view(date):
 		totals['calories'] += food['calories']
 
 
-	return render_template('day.html', entry_date=date_result['entry_date'], face_date=face_date, food_results=food_results, log_results=log_results, totals=totals)
+	return render_template('day.html', entry_date=date_result['entry_date'], face_date=face_date, 
+							food_results=food_results, log_results=log_results, totals=totals)
 
 
 
